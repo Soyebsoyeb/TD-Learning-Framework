@@ -1,0 +1,32 @@
+{
+  "random_seed": 42,
+  "experiments": {
+    "random_walk": {
+      "n_states": 19,
+      "n_episodes": 200,
+      "n_runs": 50,
+      "alpha": 0.1,
+      "gamma": 1.0
+    },
+    "cliff_walking": {
+      "n_episodes": 500,
+      "n_runs": 30,
+      "alpha": 0.5,
+      "gamma": 1.0,
+      "epsilon": 0.1
+    },
+    "gridworld": {
+      "rows": 10,
+      "cols": 10,
+      "n_episodes": 1000,
+      "alpha": 0.1,
+      "gamma": 0.9,
+      "epsilon": 0.1
+    }
+  },
+  "visualization": {
+    "dpi": 150,
+    "figure_format": "png",
+    "smoothing_window": 50
+  }
+}
