@@ -1,6 +1,6 @@
 """
-Advanced HFT-Style Dashboard for TD Learning Framework.
-Professional dark theme with real-time analytics and financial-style visualizations.
+TD Learning Framework - Professional Research Dashboard
+Enhanced with better performance, more features, and cleaner architecture
 Run with: streamlit run visualization/dashboard.py
 """
 import streamlit as st
@@ -13,6 +13,8 @@ import sys
 import os
 import time
 from datetime import datetime
+import json
+from typing import Dict, Any, Optional
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
 
@@ -31,360 +33,16 @@ from algorithms.q_learning import QLearning
 from algorithms.double_q_learning import DoubleQLearning
 from algorithms.watkins_q_lambda import WatkinsQLambda
 
-# Page configuration
 st.set_page_config(
-    page_title="TD Learning Framework",
+    page_title="TD Learning Research Platform",
     page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# HFT Style CSS
-st.markdown("""
-<style>
-    /* Global dark theme */
-    .stApp {
-        background: #0a0a0f;
-        color: #e0e0e0;
-    }
-
-    /* Hide default Streamlit elements */
-    #MainMenu {visibility: hidden;}
-    footer {visibility: hidden;}
-    header {visibility: hidden;}
-
-    /* Main container */
-    .main-container {
-        padding: 20px 30px;
-        background: #0a0a0f;
-        min-height: 100vh;
-    }
-
-    /* Header - HFT Style */
-    .hft-header {
-        background: linear-gradient(135deg, #0a0e1a 0%, #1a1a2e 50%, #16213e 100%);
-        padding: 20px 30px;
-        border-radius: 8px;
-        border: 1px solid #2a2a4a;
-        margin-bottom: 25px;
-        box-shadow: 0 4px 30px rgba(0,0,0,0.5);
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    .hft-header h1 {
-        font-size: 2rem;
-        font-weight: 300;
-        color: #00d4ff;
-        margin: 0;
-        letter-spacing: 2px;
-        text-shadow: 0 0 20px rgba(0,212,255,0.3);
-    }
-    .hft-header .status {
-        color: #00ff88;
-        font-size: 0.85rem;
-        padding: 5px 15px;
-        border: 1px solid #00ff88;
-        border-radius: 20px;
-        background: rgba(0,255,136,0.05);
-    }
-    .hft-header .status-dot {
-        display: inline-block;
-        width: 8px;
-        height: 8px;
-        background: #00ff88;
-        border-radius: 50%;
-        margin-right: 8px;
-        animation: pulse 2s infinite;
-    }
-    @keyframes pulse {
-        0% { opacity: 0.5; }
-        50% { opacity: 1; }
-        100% { opacity: 0.5; }
-    }
-
-    /* HFT Metric Cards */
-    .hft-metric {
-        background: #0d0d1a;
-        border: 1px solid #1a1a3a;
-        border-radius: 8px;
-        padding: 15px 20px;
-        margin: 5px 0;
-        box-shadow: 0 2px 15px rgba(0,0,0,0.3);
-        transition: all 0.3s ease;
-    }
-    .hft-metric:hover {
-        border-color: #00d4ff;
-        box-shadow: 0 4px 25px rgba(0,212,255,0.1);
-        transform: translateY(-2px);
-    }
-    .hft-metric-label {
-        color: #8899aa;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        font-weight: 600;
-    }
-    .hft-metric-value {
-        color: #00d4ff;
-        font-size: 1.8rem;
-        font-weight: 300;
-        margin: 5px 0 0 0;
-        font-family: 'Courier New', monospace;
-    }
-    .hft-metric-value.green {
-        color: #00ff88;
-    }
-    .hft-metric-value.red {
-        color: #ff4466;
-    }
-    .hft-metric-change {
-        font-size: 0.75rem;
-        margin-top: 3px;
-    }
-    .hft-metric-change.up {
-        color: #00ff88;
-    }
-    .hft-metric-change.down {
-        color: #ff4466;
-    }
-
-    /* Sidebar - HFT Style */
-    .css-1d391kg {
-        background: #0a0a12;
-        border-right: 1px solid #1a1a3a;
-    }
-    .sidebar-section {
-        background: #0d0d1a;
-        border: 1px solid #1a1a3a;
-        border-radius: 8px;
-        padding: 15px;
-        margin: 10px 0;
-    }
-    .sidebar-section-title {
-        color: #8899aa;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-bottom: 10px;
-        border-bottom: 1px solid #1a1a3a;
-        padding-bottom: 8px;
-    }
-
-    /* Controls */
-    .stSelectbox, .stSlider, .stNumberInput {
-        background: transparent;
-    }
-    .stSelectbox > div, .stSlider > div, .stNumberInput > div {
-        background: #0a0a12;
-        border: 1px solid #1a1a3a;
-        border-radius: 6px;
-        color: #e0e0e0;
-    }
-    .stSelectbox label, .stSlider label, .stNumberInput label {
-        color: #8899aa !important;
-        font-size: 0.75rem !important;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-    }
-
-    /* Button - HFT Style */
-    .stButton > button {
-        background: linear-gradient(135deg, #00d4ff 0%, #0066ff 100%);
-        color: #0a0a0f;
-        border: none;
-        padding: 12px 30px;
-        border-radius: 6px;
-        font-weight: 600;
-        transition: all 0.3s ease;
-        width: 100%;
-        font-size: 0.9rem;
-        letter-spacing: 1px;
-        text-transform: uppercase;
-        box-shadow: 0 4px 20px rgba(0,212,255,0.2);
-    }
-    .stButton > button:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 8px 30px rgba(0,212,255,0.4);
-        background: linear-gradient(135deg, #00e4ff 0%, #0077ff 100%);
-    }
-
-    /* Tabs - HFT Style */
-    .stTabs [data-baseweb="tab-list"] {
-        gap: 2px;
-        background: #0a0a12;
-        border-radius: 6px;
-        padding: 4px;
-        border: 1px solid #1a1a3a;
-    }
-    .stTabs [data-baseweb="tab"] {
-        background: transparent;
-        border-radius: 4px;
-        padding: 8px 20px;
-        font-weight: 500;
-        color: #8899aa;
-        transition: all 0.2s ease;
-        font-size: 0.8rem;
-        text-transform: uppercase;
-        letter-spacing: 0.5px;
-        border: none;
-    }
-    .stTabs [data-baseweb="tab"]:hover {
-        background: rgba(0,212,255,0.05);
-        color: #00d4ff;
-    }
-    .stTabs [aria-selected="true"] {
-        background: #00d4ff;
-        color: #0a0a0f;
-        box-shadow: 0 4px 15px rgba(0,212,255,0.3);
-    }
-
-    /* Plotly container */
-    .js-plotly-plot {
-        border: 1px solid #1a1a3a;
-        border-radius: 8px;
-        background: #0d0d1a;
-        padding: 10px;
-    }
-
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-        width: 6px;
-        height: 6px;
-    }
-    ::-webkit-scrollbar-track {
-        background: #0a0a0f;
-    }
-    ::-webkit-scrollbar-thumb {
-        background: #1a1a3a;
-        border-radius: 3px;
-    }
-    ::-webkit-scrollbar-thumb:hover {
-        background: #2a2a5a;
-    }
-
-    /* Expander */
-    .streamlit-expanderHeader {
-        background: #0d0d1a;
-        border: 1px solid #1a1a3a;
-        border-radius: 6px;
-        color: #8899aa;
-        font-weight: 500;
-    }
-    .streamlit-expanderContent {
-        background: #0a0a12;
-        border: 1px solid #1a1a3a;
-        border-radius: 0 0 6px 6px;
-    }
-
-    /* Info box */
-    .hft-info {
-        background: #0d0d1a;
-        border: 1px solid #1a1a3a;
-        border-left: 3px solid #00d4ff;
-        padding: 12px 15px;
-        border-radius: 4px;
-        color: #8899aa;
-        font-size: 0.8rem;
-        margin: 10px 0;
-    }
-
-    /* Status bar */
-    .status-bar {
-        background: #0a0a12;
-        border: 1px solid #1a1a3a;
-        border-radius: 6px;
-        padding: 8px 15px;
-        margin-top: 20px;
-        display: flex;
-        justify-content: space-between;
-        font-size: 0.7rem;
-        color: #556677;
-    }
-    .status-bar span {
-        font-family: 'Courier New', monospace;
-    }
-
-    /* Welcome screen */
-    .welcome-container {
-        display: flex;
-        justify-content: center;
-        align-items: center;
-        min-height: 60vh;
-        flex-direction: column;
-        text-align: center;
-    }
-    .welcome-box {
-        background: #0d0d1a;
-        border: 1px solid #1a1a3a;
-        border-radius: 12px;
-        padding: 50px;
-        max-width: 700px;
-    }
-    .welcome-icon {
-        font-size: 4rem;
-        margin-bottom: 20px;
-        color: #00d4ff;
-    }
-    .welcome-title {
-        color: #00d4ff;
-        margin: 0;
-        font-weight: 300;
-        letter-spacing: 2px;
-    }
-    .welcome-text {
-        color: #8899aa;
-        font-size: 1.1rem;
-        margin: 20px 0;
-        line-height: 1.6;
-    }
-    .step-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 15px;
-        margin: 30px 0;
-        text-align: left;
-    }
-    .step-item {
-        background: #0a0a12;
-        border: 1px solid #1a1a3a;
-        border-radius: 8px;
-        padding: 15px;
-    }
-    .step-number {
-        color: #556677;
-        font-size: 0.7rem;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-    .step-desc {
-        color: #e0e0e0;
-        font-size: 0.9rem;
-        margin-top: 5px;
-    }
-    .step-highlight {
-        color: #00d4ff;
-        font-size: 0.9rem;
-        margin-top: 5px;
-        font-weight: 600;
-    }
-    .welcome-footer {
-        color: #556677;
-        font-size: 0.85rem;
-        margin-top: 20px;
-        border-top: 1px solid #1a1a3a;
-        padding-top: 20px;
-    }
-    .welcome-dot-green {
-        color: #00ff88;
-    }
-    .welcome-dot-blue {
-        color: #00d4ff;
-    }
-</style>
-""", unsafe_allow_html=True)
-
-# Environment and algorithm mappings
+# ============================================================================
+# CONFIGURATION
+# ============================================================================
 ENV_MAP = {
     'Random Walk (5 states)': lambda: RandomWalk(5),
     'Random Walk (19 states)': lambda: RandomWalk(19),
@@ -410,170 +68,385 @@ CONTROL_ALGOS = {
     'Watkins Q(lambda)': lambda s, a, alpha, gamma, lam, eps: WatkinsQLambda(s, a, alpha=alpha, gamma=gamma, lambda_=lam, epsilon=eps),
 }
 
-# Initialize session state
-if 'training_complete' not in st.session_state:
-    st.session_state.training_complete = False
-if 'results' not in st.session_state:
-    st.session_state.results = None
-if 'algo' not in st.session_state:
-    st.session_state.algo = None
-
-# Main container
-st.markdown('<div class="main-container">', unsafe_allow_html=True)
-
-# HFT Header
+# ============================================================================
+# ENHANCED CSS
+# ============================================================================
 st.markdown("""
-<div class="hft-header">
-    <div>
-        <h1>TD LEARNING FRAMEWORK</h1>
-        <div style="font-size: 0.8rem; color: #556677; margin-top: 5px; letter-spacing: 1px;">
-            TEMPORAL DIFFERENCE LEARNING · REAL-TIME ANALYTICS
-        </div>
-    </div>
-    <div class="status">
-        <span class="status-dot"></span>
-        SYSTEM ACTIVE
-    </div>
-</div>
+<style>
+    /* ===== GLOBAL ===== */
+    .stApp { background: #0f0f1a; color: #e8e8e8; }
+    #MainMenu {visibility: hidden;}
+    footer {visibility: hidden;}
+    header {visibility: hidden;}
+    
+    /* ===== MAIN CONTAINER ===== */
+    .main-container { padding: 0 2rem 2rem 2rem; max-width: 1400px; margin: 0 auto; }
+    
+    /* ===== TOP BAR ===== */
+    .top-bar {
+        background: #1a1a2e;
+        border-bottom: 1px solid #2a2a4a;
+        padding: 0.75rem 2rem;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin: -1rem -2rem 2rem -2rem;
+        box-shadow: 0 2px 20px rgba(0,0,0,0.4);
+    }
+    .top-bar-brand { font-size: 1.25rem; font-weight: 600; color: #e8e8e8; letter-spacing: -0.5px; }
+    .top-bar-brand span { color: #60a5fa; }
+    .top-bar-status {
+        font-size: 0.75rem;
+        color: #94a3b8;
+        background: #2a2a4a;
+        padding: 0.25rem 0.75rem;
+        border-radius: 20px;
+        border: 1px solid #3a3a5a;
+    }
+    .top-bar-status .dot {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background: #34d399;
+        border-radius: 50%;
+        margin-right: 6px;
+        animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
+    
+    /* ===== SIDEBAR ===== */
+    .css-1d391kg {
+        background: #12121f !important;
+        border-right: 1px solid #1f1f3a !important;
+        padding: 0.5rem 0.5rem !important;
+    }
+    .sidebar-brand {
+        padding: 0.5rem 0.75rem 1rem 0.75rem;
+        border-bottom: 1px solid #1f1f3a;
+        margin-bottom: 0.5rem;
+    }
+    .sidebar-brand h2 { color: #e8e8e8; font-size: 1.1rem; font-weight: 600; margin: 0; letter-spacing: -0.3px; }
+    .sidebar-brand h2 span { color: #60a5fa; }
+    .sidebar-brand p { color: #64748b; font-size: 0.65rem; margin: 0.15rem 0 0 0; letter-spacing: 0.3px; }
+    
+    .sidebar-section-header {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 0.75rem 0.25rem 0.75rem;
+        margin-top: 0.25rem;
+    }
+    .sidebar-section-header .icon { font-size: 0.85rem; color: #60a5fa; }
+    .sidebar-section-header .label {
+        font-size: 0.6rem;
+        font-weight: 700;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.8px;
+    }
+    .sidebar-section-header .badge {
+        font-size: 0.5rem;
+        background: #2a2a4a;
+        color: #94a3b8;
+        padding: 0.1rem 0.4rem;
+        border-radius: 10px;
+        margin-left: auto;
+    }
+    .sidebar-section {
+        background: #18182a;
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        margin: 0.15rem 0.5rem 0.4rem 0.5rem;
+        border: 1px solid #1f1f3a;
+    }
+    .sidebar-section .stSelectbox label,
+    .sidebar-section .stSlider label,
+    .sidebar-section .stNumberInput label,
+    .sidebar-section .stRadio label {
+        font-size: 0.6rem !important;
+        font-weight: 600 !important;
+        color: #94a3b8 !important;
+        text-transform: uppercase !important;
+        letter-spacing: 0.5px !important;
+    }
+    .sidebar-section .stSelectbox > div,
+    .sidebar-section .stNumberInput > div {
+        background: #0f0f1a !important;
+        border: 1px solid #2a2a4a !important;
+        border-radius: 6px !important;
+    }
+    .sidebar-section .stSelectbox > div:hover,
+    .sidebar-section .stNumberInput > div:hover {
+        border-color: #3b82f6 !important;
+    }
+    .sidebar-section .stSlider > div > div { background: #1f1f3a !important; }
+    .sidebar-section .stSlider > div > div > div { background: #3b82f6 !important; }
+    .sidebar-section .stRadio > div { gap: 0.5rem !important; }
+    .sidebar-section .stRadio > div > label {
+        font-size: 0.75rem !important;
+        color: #94a3b8 !important;
+        padding: 0.15rem 0.5rem !important;
+        border-radius: 4px !important;
+        transition: all 0.2s !important;
+    }
+    .sidebar-section .stRadio > div > label:hover {
+        background: #2a2a4a !important;
+        color: #e8e8e8 !important;
+    }
+    .sidebar-section .stRadio > div > label > div { border-color: #3a3a5a !important; }
+    .sidebar-section .stRadio > div > label > div[data-checked="true"] {
+        background-color: #3b82f6 !important;
+        border-color: #3b82f6 !important;
+    }
+    .sidebar-section .stNumberInput > div > input {
+        background: #0f0f1a !important;
+        color: #e8e8e8 !important;
+        border: none !important;
+        font-size: 0.8rem !important;
+        font-weight: 500 !important;
+    }
+    
+    /* ===== BUTTONS ===== */
+    .run-button-container { padding: 0.25rem 0.5rem; margin-top: 0.25rem; }
+    .stButton > button {
+        background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+        color: #ffffff !important;
+        border: none !important;
+        padding: 0.6rem 1.5rem !important;
+        border-radius: 6px !important;
+        font-weight: 600 !important;
+        font-size: 0.85rem !important;
+        transition: all 0.3s !important;
+        width: 100% !important;
+        cursor: pointer !important;
+        letter-spacing: 0.5px !important;
+    }
+    .stButton > button:hover {
+        background: linear-gradient(135deg, #60a5fa, #3b82f6) !important;
+        box-shadow: 0 4px 20px rgba(59,130,246,0.4) !important;
+        transform: translateY(-1px) !important;
+    }
+    .stButton > button:active { transform: translateY(0) !important; }
+    
+    /* ===== STATUS CARD ===== */
+    .status-card {
+        background: #18182a;
+        border: 1px solid #1f1f3a;
+        border-radius: 8px;
+        padding: 0.5rem 0.75rem;
+        margin: 0.25rem 0.5rem;
+    }
+    .status-card .label { font-size: 0.55rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .status-card .value {
+        font-size: 0.75rem;
+        color: #e8e8e8;
+        font-weight: 500;
+        margin-top: 0.1rem;
+    }
+    .status-card .value .dot-online {
+        display: inline-block;
+        width: 6px;
+        height: 6px;
+        background: #34d399;
+        border-radius: 50%;
+        margin-right: 4px;
+        animation: pulse-green 2s infinite;
+    }
+    
+    /* ===== SIDEBAR FOOTER ===== */
+    .sidebar-footer {
+        padding: 0.5rem 0.75rem;
+        margin-top: 0.25rem;
+        border-top: 1px solid #1f1f3a;
+    }
+    .sidebar-footer .version { font-size: 0.55rem; color: #64748b; letter-spacing: 0.5px; }
+    .sidebar-footer .key-shortcuts { font-size: 0.5rem; color: #4a4a6a; margin-top: 0.1rem; }
+    
+    /* ===== METRIC CARDS ===== */
+    .metric-card {
+        background: #1a1a2e;
+        border: 1px solid #2a2a4a;
+        border-radius: 8px;
+        padding: 1rem 1.25rem;
+        transition: all 0.2s;
+    }
+    .metric-card:hover {
+        border-color: #4a4a6a;
+        box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+        transform: translateY(-2px);
+    }
+    .metric-label { font-size: 0.7rem; font-weight: 500; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.3px; }
+    .metric-value {
+        font-size: 1.75rem;
+        font-weight: 600;
+        color: #e8e8e8;
+        margin-top: 0.25rem;
+        font-feature-settings: "tnum";
+    }
+    .metric-value.green { color: #34d399; }
+    .metric-value.blue { color: #60a5fa; }
+    .metric-value.orange { color: #fbbf24; }
+    .metric-value.purple { color: #a78bfa; }
+    .metric-value.red { color: #f87171; }
+    .metric-change { font-size: 0.75rem; margin-top: 0.25rem; }
+    .metric-change.up { color: #34d399; }
+    .metric-change.down { color: #f87171; }
+    .metric-change.neutral { color: #94a3b8; }
+    
+    /* ===== TABS ===== */
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 0;
+        background: #1a1a2e;
+        border-radius: 8px;
+        padding: 0.25rem;
+        margin-bottom: 1rem;
+        border: 1px solid #2a2a4a;
+    }
+    .stTabs [data-baseweb="tab"] {
+        background: transparent;
+        border-radius: 6px;
+        padding: 0.5rem 1.5rem;
+        font-weight: 500;
+        font-size: 0.8rem;
+        color: #94a3b8;
+        border: none;
+        transition: all 0.2s;
+    }
+    .stTabs [data-baseweb="tab"]:hover {
+        background: rgba(255,255,255,0.05);
+        color: #e8e8e8;
+    }
+    .stTabs [aria-selected="true"] {
+        background: #2a2a4a;
+        color: #e8e8e8;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    }
+    
+    /* ===== WELCOME BOX ===== */
+    .welcome-container { display: flex; justify-content: center; align-items: center; min-height: 60vh; }
+    .welcome-box {
+        background: #1a1a2e;
+        border: 1px solid #2a2a4a;
+        border-radius: 12px;
+        padding: 3rem 4rem;
+        max-width: 560px;
+        text-align: center;
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    }
+    .welcome-box h2 { color: #e8e8e8; font-size: 1.5rem; font-weight: 600; margin: 0.5rem 0; letter-spacing: -0.5px; }
+    .welcome-box p { color: #94a3b8; font-size: 0.95rem; line-height: 1.6; margin: 0.5rem 0 1.5rem 0; }
+    .welcome-steps {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 0.75rem;
+        text-align: left;
+        margin: 1.5rem 0;
+    }
+    .welcome-step {
+        background: #22223a;
+        padding: 0.75rem 1rem;
+        border-radius: 6px;
+        border: 1px solid #2a2a4a;
+    }
+    .welcome-step .num { font-size: 0.6rem; font-weight: 600; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; }
+    .welcome-step .text { font-size: 0.85rem; color: #e8e8e8; margin-top: 0.15rem; }
+    .welcome-step .text.highlight { color: #60a5fa; font-weight: 500; }
+    
+    /* ===== STATUS BAR ===== */
+    .status-bar {
+        background: #1a1a2e;
+        border: 1px solid #2a2a4a;
+        border-radius: 6px;
+        padding: 0.5rem 1rem;
+        margin-top: 1.5rem;
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.7rem;
+        color: #64748b;
+    }
+    .status-bar span { color: #94a3b8; }
+    
+    /* ===== PLOTLY ===== */
+    .js-plotly-plot {
+        border: 1px solid #2a2a4a;
+        border-radius: 8px;
+        background: #1a1a2e;
+        padding: 0.5rem;
+    }
+    
+    /* ===== DATAFRAME ===== */
+    .dataframe {
+        border: 1px solid #2a2a4a !important;
+        border-radius: 6px !important;
+        background: #1a1a2e !important;
+    }
+    .dataframe thead tr th {
+        background: #22223a !important;
+        color: #e8e8e8 !important;
+        font-weight: 600 !important;
+        border-bottom: 1px solid #2a2a4a !important;
+    }
+    .dataframe tbody tr td {
+        border-bottom: 1px solid #2a2a4a !important;
+        color: #94a3b8 !important;
+    }
+    .dataframe tbody tr:hover td { background: #22223a !important; }
+    
+    /* ===== SCROLLBAR ===== */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #1a1a2e; }
+    ::-webkit-scrollbar-thumb { background: #2a2a4a; border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: #3a3a5a; }
+    
+    /* ===== PAGE TITLE ===== */
+    .page-title { font-size: 1.5rem; font-weight: 600; color: #e8e8e8; margin-bottom: 0.25rem; letter-spacing: -0.5px; }
+    .page-subtitle { color: #94a3b8; font-size: 0.9rem; margin-bottom: 1.5rem; }
+</style>
 """, unsafe_allow_html=True)
 
-# Sidebar - HFT Style
-with st.sidebar:
-    st.markdown("""
-    <div style="padding: 10px 0;">
-        <div style="color: #00d4ff; font-size: 0.7rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 15px;">
-            CONFIGURATION
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+# ============================================================================
+# SESSION STATE MANAGEMENT
+# ============================================================================
+class SessionState:
+    """Manage session state with defaults."""
+    
+    @staticmethod
+    def init():
+        """Initialize session state variables."""
+        if 'results' not in st.session_state:
+            st.session_state.results = None
+        if 'training_done' not in st.session_state:
+            st.session_state.training_done = False
+        if 'experiment_history' not in st.session_state:
+            st.session_state.experiment_history = []
+        if 'current_config' not in st.session_state:
+            st.session_state.current_config = {}
+    
+    @staticmethod
+    def save_experiment(config: Dict[str, Any], results: Dict[str, Any]):
+        """Save experiment to history."""
+        experiment = {
+            'timestamp': datetime.now().isoformat(),
+            'config': config,
+            'results': {
+                'avg_reward': results.get('avg_reward', 0),
+                'best_reward': results.get('best_reward', 0),
+                'training_time': results.get('training_time', 0),
+                'episodes': results.get('episodes', 0),
+            }
+        }
+        st.session_state.experiment_history.append(experiment)
+        # Keep last 20 experiments
+        if len(st.session_state.experiment_history) > 20:
+            st.session_state.experiment_history = st.session_state.experiment_history[-20:]
 
-    # Environment
-    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section-title">ENVIRONMENT</div>', unsafe_allow_html=True)
-    env_name = st.selectbox(
-        "Select Environment",
-        list(ENV_MAP.keys()),
-        key="env_select",
-        label_visibility="collapsed"
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
+SessionState.init()
 
-    # Algorithm Type
-    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section-title">ALGORITHM TYPE</div>', unsafe_allow_html=True)
-    algo_type = st.radio(
-        "Select Algorithm Type",
-        ["Prediction", "Control"],
-        key="algo_type_radio",
-        label_visibility="collapsed",
-        horizontal=True
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Algorithm
-    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section-title">ALGORITHM</div>', unsafe_allow_html=True)
-    if algo_type == "Prediction":
-        algo_name = st.selectbox(
-            "Select Algorithm",
-            list(PREDICTION_ALGOS.keys()),
-            key="algo_select_pred",
-            label_visibility="collapsed"
-        )
-    else:
-        algo_name = st.selectbox(
-            "Select Algorithm",
-            list(CONTROL_ALGOS.keys()),
-            key="algo_select_control",
-            label_visibility="collapsed"
-        )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Hyperparameters
-    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section-title">HYPERPARAMETERS</div>', unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2)
-    with col1:
-        alpha = st.slider(
-            "Alpha",
-            0.001, 1.0, 0.1, 0.001,
-            format="%.3f",
-            key="alpha_slider",
-            label_visibility="collapsed"
-        )
-        st.caption("Learning Rate")
-    with col2:
-        gamma = st.slider(
-            "Gamma",
-            0.0, 1.0, 0.95, 0.01,
-            format="%.2f",
-            key="gamma_slider",
-            label_visibility="collapsed"
-        )
-        st.caption("Discount Factor")
-
-    lambda_ = st.slider(
-        "Lambda",
-        0.0, 1.0, 0.8, 0.01,
-        format="%.2f",
-        key="lambda_slider",
-        label_visibility="collapsed"
-    )
-    st.caption("Eligibility Trace")
-
-    epsilon = st.slider(
-        "Epsilon",
-        0.0, 1.0, 0.1, 0.01,
-        format="%.2f",
-        key="epsilon_slider",
-        label_visibility="collapsed"
-    )
-    st.caption("Exploration Rate")
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Training
-    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
-    st.markdown('<div class="sidebar-section-title">TRAINING</div>', unsafe_allow_html=True)
-    n_episodes = st.number_input(
-        "Number of Episodes",
-        10, 10000, 500, 10,
-        key="episodes_input",
-        label_visibility="collapsed"
-    )
-    seed = st.number_input(
-        "Random Seed",
-        0, 10000, 42, 1,
-        key="seed_input",
-        label_visibility="collapsed"
-    )
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # Run button
-    st.markdown('<div style="margin-top: 15px;">', unsafe_allow_html=True)
-    run_button = st.button("EXECUTE TRAINING", use_container_width=True)
-    st.markdown('</div>', unsafe_allow_html=True)
-
-    # System info
-    st.markdown("""
-    <div class="hft-info" style="margin-top: 15px;">
-        <div style="color: #556677; font-size: 0.65rem; text-transform: uppercase; letter-spacing: 1px;">
-            System Status
-        </div>
-        <div style="color: #8899aa; font-size: 0.75rem; font-family: 'Courier New', monospace; margin-top: 5px;">
-            ● Ready
-        </div>
-        <div style="color: #556677; font-size: 0.65rem; margin-top: 5px;">
-            Framework v2.0 · Streamlit
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-# Main content area - Training execution
-if run_button:
-    np.random.seed(seed)
-
-    # Get environment info
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+def create_environment(env_name: str):
+    """Create environment from name."""
     if 'Random Walk' in env_name:
         env = ENV_MAP[env_name]()
         n_states = env.n_states + 2
@@ -582,485 +455,590 @@ if run_button:
         env = ENV_MAP[env_name]()
         n_states = env.n_states if hasattr(env, 'n_states') else env.n_states
         n_actions = getattr(env, 'n_actions', 2)
+    return env, n_states, n_actions
 
-    # Initialize algorithm
+def get_algorithm(algo_type: str, algo_name: str, n_states: int, n_actions: int, 
+                  alpha: float, gamma: float, lambda_: float, epsilon: float):
+    """Get algorithm instance."""
     if algo_type == "Prediction":
-        algo = PREDICTION_ALGOS[algo_name](n_states, n_actions, alpha, gamma, lambda_, epsilon)
+        return PREDICTION_ALGOS[algo_name](n_states, n_actions, alpha, gamma, lambda_, epsilon)
     else:
-        algo = CONTROL_ALGOS[algo_name](n_states, n_actions, alpha, gamma, lambda_, epsilon)
+        return CONTROL_ALGOS[algo_name](n_states, n_actions, alpha, gamma, lambda_, epsilon)
 
-    # Training with progress
+def compute_metrics(rewards: list) -> Dict[str, Any]:
+    """Compute comprehensive metrics from rewards."""
+    if len(rewards) == 0:
+        return {}
+    
+    metrics = {
+        'total_episodes': len(rewards),
+        'total_reward': np.sum(rewards),
+        'mean_reward': np.mean(rewards),
+        'median_reward': np.median(rewards),
+        'std_reward': np.std(rewards),
+        'min_reward': np.min(rewards),
+        'max_reward': np.max(rewards),
+    }
+    
+    if len(rewards) >= 50:
+        metrics['mean_reward_last_50'] = np.mean(rewards[-50:])
+    
+    if len(rewards) >= 100:
+        prev_50 = np.mean(rewards[-100:-50])
+        curr_50 = np.mean(rewards[-50:])
+        metrics['improvement'] = ((curr_50 - prev_50) / (abs(prev_50) + 1e-6)) * 100
+        metrics['convergence'] = 100 * (1 - np.std(rewards[-100:]) / (abs(np.mean(rewards[-100:])) + 1e-6))
+    
+    return metrics
+
+# ============================================================================
+# TOP NAVIGATION
+# ============================================================================
+st.markdown("""
+<div class="top-bar">
+    <div class="top-bar-brand">TD <span>Learning</span> Platform</div>
+    <div class="top-bar-status">
+        <span class="dot"></span> System Ready
+    </div>
+</div>
+""", unsafe_allow_html=True)
+
+# ============================================================================
+# SIDEBAR
+# ============================================================================
+with st.sidebar:
+    st.markdown("""
+    <div class="sidebar-brand">
+        <h2>TD <span>Learning</span></h2>
+        <p>Research Platform v2.0</p>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Environment
+    st.markdown("""
+    <div class="sidebar-section-header">
+        <span class="icon">🌍</span>
+        <span class="label">Environment</span>
+        <span class="badge">1/6</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    env_name = st.selectbox(
+        "Select Environment",
+        list(ENV_MAP.keys()),
+        key="env_select"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Algorithm Type
+    st.markdown("""
+    <div class="sidebar-section-header">
+        <span class="icon">⚙️</span>
+        <span class="label">Algorithm Type</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    algo_type = st.radio(
+        "Select Algorithm Type",
+        ["Prediction", "Control"],
+        horizontal=True,
+        key="algo_type_radio"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Algorithm
+    st.markdown("""
+    <div class="sidebar-section-header">
+        <span class="icon">🧠</span>
+        <span class="label">Algorithm</span>
+        <span class="badge">9 total</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    if algo_type == "Prediction":
+        algo_name = st.selectbox(
+            "Select Algorithm",
+            list(PREDICTION_ALGOS.keys()),
+            key="algo_select_pred"
+        )
+    else:
+        algo_name = st.selectbox(
+            "Select Algorithm",
+            list(CONTROL_ALGOS.keys()),
+            key="algo_select_control"
+        )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Hyperparameters
+    st.markdown("""
+    <div class="sidebar-section-header">
+        <span class="icon">📐</span>
+        <span class="label">Hyperparameters</span>
+        <span class="badge">4</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    
+    alpha = st.slider(
+        "Learning Rate (α)",
+        0.001, 1.0, 0.1, 0.001,
+        format="%.3f",
+        key="alpha_slider"
+    )
+    gamma = st.slider(
+        "Discount Factor (γ)",
+        0.0, 1.0, 0.95, 0.01,
+        format="%.2f",
+        key="gamma_slider"
+    )
+    lambda_ = st.slider(
+        "Eligibility Trace (λ)",
+        0.0, 1.0, 0.8, 0.01,
+        format="%.2f",
+        key="lambda_slider"
+    )
+    epsilon = st.slider(
+        "Exploration (ε)",
+        0.0, 1.0, 0.1, 0.01,
+        format="%.2f",
+        key="epsilon_slider"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Training
+    st.markdown("""
+    <div class="sidebar-section-header">
+        <span class="icon">🎯</span>
+        <span class="label">Training</span>
+    </div>
+    """, unsafe_allow_html=True)
+    st.markdown('<div class="sidebar-section">', unsafe_allow_html=True)
+    
+    n_episodes = st.number_input(
+        "Number of Episodes",
+        10, 10000, 500, 50,
+        key="episodes_input"
+    )
+    seed = st.number_input(
+        "Random Seed",
+        0, 10000, 42, 1,
+        key="seed_input"
+    )
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Run button
+    st.markdown('<div class="run-button-container">', unsafe_allow_html=True)
+    run_button = st.button("▶ Run Experiment", use_container_width=True, key="run_btn")
+    st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Reset button
+    if st.session_state.training_done:
+        st.markdown('<div style="padding: 0 0.5rem; margin-top: 0.25rem;">', unsafe_allow_html=True)
+        if st.button("⟳ New Experiment", use_container_width=True, key="reset_btn"):
+            st.session_state.results = None
+            st.session_state.training_done = False
+            st.rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
+    
+    # Status card
+    st.markdown("""
+    <div class="status-card">
+        <div class="label">System Status</div>
+        <div class="value">
+            <span class="dot-online"></span> Online · Ready
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # Footer
+    st.markdown("""
+    <div class="sidebar-footer">
+        <div class="version">TD Learning Framework v2.0</div>
+        <div class="key-shortcuts">⌘ + Enter to run</div>
+    </div>
+    """, unsafe_allow_html=True)
+
+# ============================================================================
+# MAIN CONTENT
+# ============================================================================
+st.markdown('<div class="main-container">', unsafe_allow_html=True)
+
+# ============================================================================
+# TRAINING EXECUTION
+# ============================================================================
+if run_button:
+    np.random.seed(seed)
+    
+    # Create environment and algorithm
+    env, n_states, n_actions = create_environment(env_name)
+    algo = get_algorithm(algo_type, algo_name, n_states, n_actions, alpha, gamma, lambda_, epsilon)
+    
+    # Train with progress
     with st.spinner("Training in progress..."):
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-
-        start_time = time.time()
-
-        # Custom training with progress
+        progress = st.progress(0)
+        start = time.time()
+        
         if algo_type == "Prediction":
             V = algo.train(env, n_episodes=n_episodes)
         else:
             Q = algo.train(env, n_episodes=n_episodes)
-
-        elapsed_time = time.time() - start_time
-        progress_bar.progress(100)
-        status_text.text("Training complete!")
-
-    st.session_state.training_complete = True
+        
+        elapsed = time.time() - start
+        progress.progress(100)
+    
+    # Save results
+    rewards = algo.episode_rewards
+    metrics = compute_metrics(rewards)
+    
     st.session_state.results = {
         'algo': algo,
+        'env': env,
         'env_name': env_name,
         'algo_name': algo_name,
         'algo_type': algo_type,
+        'elapsed': elapsed,
         'n_episodes': n_episodes,
-        'elapsed_time': elapsed_time,
+        'seed': seed,
+        'alpha': alpha,
+        'gamma': gamma,
+        'lambda_': lambda_,
+        'epsilon': epsilon,
         'n_states': n_states,
-        'env': env
+        'n_actions': n_actions,
+        'rewards': rewards,
+        'metrics': metrics
     }
-    st.session_state.algo = algo
+    st.session_state.training_done = True
+    
+    # Save to history
+    SessionState.save_experiment(
+        config={'env': env_name, 'algo': algo_name, 'type': algo_type},
+        results={'avg_reward': metrics.get('mean_reward', 0), 
+                 'best_reward': metrics.get('max_reward', 0),
+                 'training_time': elapsed,
+                 'episodes': n_episodes}
+    )
 
-# Display results or welcome screen
-if st.session_state.training_complete and st.session_state.results is not None:
-    results = st.session_state.results
-    algo = results['algo']
-    env = results['env']
-    n_actions = getattr(env, 'n_actions', 2)
-
-    # HFT Metrics Row
+# ============================================================================
+# DISPLAY RESULTS
+# ============================================================================
+if st.session_state.training_done and st.session_state.results is not None:
+    r = st.session_state.results
+    algo = r['algo']
+    env = r['env']
+    rewards = r['rewards']
+    metrics = r['metrics']
+    
+    # Page title
+    st.markdown(f"""
+    <div class="page-title">Experiment Results</div>
+    <div class="page-subtitle">
+        {r['algo_name']} · {r['env_name']} · {r['n_episodes']} episodes
+    </div>
+    """, unsafe_allow_html=True)
+    
+    # ========================================================================
+    # METRIC CARDS
+    # ========================================================================
+    avg_reward = metrics.get('mean_reward_last_50', metrics.get('mean_reward', 0))
+    best_reward = metrics.get('max_reward', 0)
+    
     col1, col2, col3, col4 = st.columns(4)
-
+    
     with col1:
-        avg_reward = np.mean(algo.episode_rewards[-50:])
-        change = ((avg_reward - np.mean(algo.episode_rewards[-100:-50])) / (abs(np.mean(algo.episode_rewards[-100:-50])) + 1e-6) * 100) if len(algo.episode_rewards) >= 100 else 0
+        improvement = metrics.get('improvement', 0)
+        if 'improvement' in metrics:
+            change_text = f"{'▲' if improvement > 0 else '▼'} {abs(improvement):.1f}% vs previous"
+            change_class = "up" if improvement > 0 else "down"
+        else:
+            change_text = "─ Insufficient data"
+            change_class = "neutral"
+        
         st.markdown(f"""
-        <div class="hft-metric">
-            <div class="hft-metric-label">Average Reward (Last 50)</div>
-            <div class="hft-metric-value green">{avg_reward:.2f}</div>
-            <div class="hft-metric-change {'up' if change > 0 else 'down'}">{'+' if change > 0 else ''}{change:.1f}%</div>
+        <div class="metric-card">
+            <div class="metric-label">Average Reward (last 50)</div>
+            <div class="metric-value green">{avg_reward:.2f}</div>
+            <div class="metric-change {change_class}">{change_text}</div>
         </div>
         """, unsafe_allow_html=True)
-
+    
     with col2:
-        best_reward = np.max(algo.episode_rewards)
         st.markdown(f"""
-        <div class="hft-metric">
-            <div class="hft-metric-label">Best Reward</div>
-            <div class="hft-metric-value">{best_reward:.2f}</div>
-            <div class="hft-metric-change" style="color: #8899aa;">Peak Performance</div>
+        <div class="metric-card">
+            <div class="metric-label">Best Reward</div>
+            <div class="metric-value blue">{best_reward:.2f}</div>
+            <div class="metric-change neutral">Peak performance</div>
         </div>
         """, unsafe_allow_html=True)
-
+    
     with col3:
         st.markdown(f"""
-        <div class="hft-metric">
-            <div class="hft-metric-label">Training Time</div>
-            <div class="hft-metric-value">{results['elapsed_time']:.2f}s</div>
-            <div class="hft-metric-change" style="color: #8899aa;">{algo_name}</div>
+        <div class="metric-card">
+            <div class="metric-label">Training Time</div>
+            <div class="metric-value orange">{r['elapsed']:.2f}s</div>
+            <div class="metric-change neutral">{r['n_episodes']} episodes</div>
         </div>
         """, unsafe_allow_html=True)
-
+    
     with col4:
         if hasattr(algo, 'episode_lengths') and len(algo.episode_lengths) > 0:
-            avg_length = np.mean(algo.episode_lengths)
+            avg_len = np.mean(algo.episode_lengths)
         else:
-            avg_length = len(algo.episode_rewards)
+            avg_len = len(rewards)
         st.markdown(f"""
-        <div class="hft-metric">
-            <div class="hft-metric-label">Avg Episode Length</div>
-            <div class="hft-metric-value">{avg_length:.1f}</div>
-            <div class="hft-metric-change" style="color: #8899aa;">Steps per episode</div>
+        <div class="metric-card">
+            <div class="metric-label">Avg Episode Length</div>
+            <div class="metric-value purple">{avg_len:.1f}</div>
+            <div class="metric-change neutral">Steps per episode</div>
         </div>
         """, unsafe_allow_html=True)
-
-    # Tabs
-    tab1, tab2, tab3, tab4 = st.tabs(["Performance", "Value Function", "Policy", "Statistics"])
-
+    
+    # ========================================================================
+    # TABS
+    # ========================================================================
+    tab1, tab2, tab3, tab4 = st.tabs(["📈 Learning Curve", "📊 Value Function", "📋 Statistics", "📜 History"])
+    
+    # ------------------------------------------------------------------------
+    # TAB 1: Learning Curve
+    # ------------------------------------------------------------------------
     with tab1:
-        st.markdown('<div style="margin-bottom: 15px; color: #8899aa; font-size: 0.8rem; letter-spacing: 1px;">REWARD PROGRESSION</div>', unsafe_allow_html=True)
-
-        rewards = algo.episode_rewards
         window = max(1, len(rewards) // 20)
         smoothed = np.convolve(rewards, np.ones(window)/window, mode='valid')
-
-        fig = make_subplots(
-            rows=2, cols=1,
-            subplot_titles=("", ""),
-            vertical_spacing=0.12,
-            row_heights=[0.6, 0.4]
-        )
-
-        # Main chart - Dark theme
+        
+        fig = make_subplots(rows=2, cols=1, shared_xaxes=True, 
+                           vertical_spacing=0.08,
+                           row_heights=[0.65, 0.35])
+        
+        # Raw rewards
         fig.add_trace(
             go.Scatter(
                 x=list(range(len(rewards))),
                 y=rewards,
                 mode='lines',
-                name='Raw',
-                line=dict(color='#1a2a4a', width=1),
-                opacity=0.5
+                name='Reward',
+                line=dict(color='#4a4a6a', width=1),
+                opacity=0.5,
+                showlegend=True
             ),
             row=1, col=1
         )
-
+        
+        # Smoothed
         fig.add_trace(
             go.Scatter(
                 x=list(range(window-1, len(rewards))),
                 y=smoothed,
                 mode='lines',
                 name='Smoothed',
-                line=dict(color='#00d4ff', width=2.5),
+                line=dict(color='#60a5fa', width=2.5),
                 fill='tozeroy',
-                fillcolor='rgba(0,212,255,0.1)'
+                fillcolor='rgba(96,165,250,0.08)',
+                showlegend=True
             ),
             row=1, col=1
         )
-
+        
         # Cumulative average
-        cumulative_avg = np.cumsum(rewards) / (np.arange(len(rewards)) + 1)
+        cum_avg = np.cumsum(rewards) / (np.arange(len(rewards)) + 1)
         fig.add_trace(
             go.Scatter(
                 x=list(range(len(rewards))),
-                y=cumulative_avg,
+                y=cum_avg,
                 mode='lines',
                 name='Cumulative Avg',
-                line=dict(color='#00ff88', width=2, dash='dash'),
+                line=dict(color='#34d399', width=2, dash='dash'),
+                showlegend=True
             ),
             row=2, col=1
         )
-
-        # Add horizontal line for final average
+        
+        # Final average
         final_avg = np.mean(rewards[-100:]) if len(rewards) >= 100 else np.mean(rewards)
         fig.add_hline(
             y=final_avg,
             line_dash="dot",
-            line_color="#ff4466",
-            line_width=1,
+            line_color="#f87171",
+            line_width=1.5,
             row=2, col=1,
             annotation_text=f"Final Avg: {final_avg:.2f}",
-            annotation_font_color="#ff4466"
+            annotation_font_color="#f87171",
+            annotation_font_size=10
         )
-
+        
         fig.update_layout(
-            height=500,
+            height=450,
             showlegend=True,
             hovermode='x unified',
             template='plotly_dark',
-            paper_bgcolor='#0a0a0f',
-            plot_bgcolor='#0a0a0f',
-            font=dict(color='#8899aa', size=10),
+            paper_bgcolor='#1a1a2e',
+            plot_bgcolor='#1a1a2e',
+            font=dict(color='#94a3b8', size=11),
             legend=dict(
                 orientation="h",
                 yanchor="bottom",
                 y=1.02,
                 xanchor="right",
                 x=1,
-                bgcolor='rgba(0,0,0,0)'
+                bgcolor='rgba(26,26,46,0.9)',
+                bordercolor='#2a2a4a',
+                borderwidth=1
             ),
-            margin=dict(l=40, r=40, t=30, b=40)
+            margin=dict(l=50, r=30, t=30, b=40)
         )
-
-        fig.update_xaxes(
-            title_text="Episode",
-            gridcolor='#1a1a3a',
-            color='#556677',
-            row=1, col=1
-        )
-        fig.update_xaxes(
-            title_text="Episode",
-            gridcolor='#1a1a3a',
-            color='#556677',
-            row=2, col=1
-        )
-        fig.update_yaxes(
-            title_text="Reward",
-            gridcolor='#1a1a3a',
-            color='#556677',
-            row=1, col=1
-        )
-        fig.update_yaxes(
-            title_text="Average Reward",
-            gridcolor='#1a1a3a',
-            color='#556677',
-            row=2, col=1
-        )
-
-        st.plotly_chart(fig, use_container_width=True)
-
-        # Quick stats below chart
-        col1, col2, col3, col4 = st.columns(4)
-        with col1:
-            st.metric("Total Episodes", len(rewards))
-        with col2:
-            st.metric("Total Reward", f"{np.sum(rewards):.2f}")
-        with col3:
-            st.metric("Std Deviation", f"{np.std(rewards):.2f}")
-        with col4:
-            convergence = 100 * (1 - np.std(rewards[-100:]) / (abs(np.mean(rewards[-100:])) + 1e-6))
-            st.metric("Convergence", f"{convergence:.1f}%")
-
+        
+        fig.update_xaxes(title_text="Episode", gridcolor='#2a2a4a', color='#64748b', row=1, col=1)
+        fig.update_xaxes(title_text="Episode", gridcolor='#2a2a4a', color='#64748b', row=2, col=1)
+        fig.update_yaxes(title_text="Reward", gridcolor='#2a2a4a', color='#64748b', row=1, col=1)
+        fig.update_yaxes(title_text="Average Reward", gridcolor='#2a2a4a', color='#64748b', row=2, col=1)
+        
+        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+        
+        # Quick stats
+        c1, c2, c3, c4 = st.columns(4)
+        c1.metric("Total Episodes", metrics.get('total_episodes', 0))
+        c2.metric("Total Reward", f"{metrics.get('total_reward', 0):.2f}")
+        c3.metric("Std Deviation", f"{metrics.get('std_reward', 0):.2f}")
+        convergence = metrics.get('convergence', 0)
+        c4.metric("Convergence", f"{convergence:.1f}%")
+    
+    # ------------------------------------------------------------------------
+    # TAB 2: Value Function
+    # ------------------------------------------------------------------------
     with tab2:
-        st.markdown('<div style="margin-bottom: 15px; color: #8899aa; font-size: 0.8rem; letter-spacing: 1px;">VALUE FUNCTION ANALYSIS</div>', unsafe_allow_html=True)
-
-        if algo_type == "Prediction":
+        if r['algo_type'] == "Prediction":
             V = algo.V
-
-            if 'Random Walk' in results['env_name']:
+            
+            if 'Random Walk' in r['env_name']:
                 V_plot = V[1:-1]
                 fig2 = go.Figure()
                 fig2.add_trace(go.Bar(
                     x=list(range(len(V_plot))),
                     y=V_plot,
-                    marker_color='#00d4ff',
+                    marker_color='#60a5fa',
                     marker_opacity=0.8,
                     text=[f'{v:.3f}' for v in V_plot],
                     textposition='outside',
-                    textfont=dict(color='#8899aa', size=9)
+                    textfont=dict(color='#94a3b8', size=10)
                 ))
                 fig2.update_layout(
                     title="Value Function by State",
-                    height=400,
+                    height=350,
                     template='plotly_dark',
-                    paper_bgcolor='#0a0a0f',
-                    plot_bgcolor='#0a0a0f',
-                    font=dict(color='#8899aa'),
-                    margin=dict(l=40, r=40, t=40, b=40)
+                    paper_bgcolor='#1a1a2e',
+                    plot_bgcolor='#1a1a2e',
+                    font=dict(color='#94a3b8', size=11),
+                    margin=dict(l=40, r=40, t=50, b=40),
+                    showlegend=False
                 )
-                fig2.update_xaxes(title_text="State", gridcolor='#1a1a3a', color='#556677')
-                fig2.update_yaxes(title_text="Value", gridcolor='#1a1a3a', color='#556677')
-                st.plotly_chart(fig2, use_container_width=True)
-
+                fig2.update_xaxes(title_text="State", gridcolor='#2a2a4a', color='#64748b')
+                fig2.update_yaxes(title_text="Value", gridcolor='#2a2a4a', color='#64748b')
+                st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
             elif hasattr(env, 'rows') and hasattr(env, 'cols'):
                 grid = V.reshape(env.rows, env.cols)
                 fig2 = go.Figure(data=go.Heatmap(
                     z=grid,
-                    colorscale='Viridis',
+                    colorscale='Blues',
                     showscale=True,
                     text=[[f'{grid[i][j]:.2f}' for j in range(grid.shape[1])] for i in range(grid.shape[0])],
                     texttemplate='%{text}',
-                    textfont={"size": 10, "color": "white"},
+                    textfont={"size": 10, "color": "#e8e8e8"},
                     hoverongaps=False,
-                    colorbar=dict(title="Value", tickfont=dict(color='#8899aa'))
+                    colorbar=dict(title="Value", tickfont=dict(color='#94a3b8'))
                 ))
                 fig2.update_layout(
                     title="Value Function Heatmap",
-                    height=450,
+                    height=400,
                     template='plotly_dark',
-                    paper_bgcolor='#0a0a0f',
-                    plot_bgcolor='#0a0a0f',
-                    font=dict(color='#8899aa'),
-                    margin=dict(l=40, r=40, t=40, b=40)
+                    paper_bgcolor='#1a1a2e',
+                    plot_bgcolor='#1a1a2e',
+                    font=dict(color='#94a3b8', size=11),
+                    margin=dict(l=40, r=40, t=50, b=40)
                 )
-                fig2.update_xaxes(title_text="Column", gridcolor='#1a1a3a', color='#556677')
-                fig2.update_yaxes(title_text="Row", gridcolor='#1a1a3a', color='#556677')
-                st.plotly_chart(fig2, use_container_width=True)
+                fig2.update_xaxes(title_text="Column", gridcolor='#2a2a4a', color='#64748b')
+                fig2.update_yaxes(title_text="Row", gridcolor='#2a2a4a', color='#64748b')
+                st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
             else:
                 fig2 = go.Figure()
                 fig2.add_trace(go.Bar(
                     x=list(range(len(V))),
                     y=V,
-                    marker_color='#00d4ff',
+                    marker_color='#60a5fa',
                     marker_opacity=0.8
                 ))
                 fig2.update_layout(
                     title="Value Function",
-                    height=400,
+                    height=350,
                     template='plotly_dark',
-                    paper_bgcolor='#0a0a0f',
-                    plot_bgcolor='#0a0a0f',
-                    font=dict(color='#8899aa'),
-                    margin=dict(l=40, r=40, t=40, b=40)
+                    paper_bgcolor='#1a1a2e',
+                    plot_bgcolor='#1a1a2e',
+                    font=dict(color='#94a3b8', size=11),
+                    margin=dict(l=40, r=40, t=50, b=40),
+                    showlegend=False
                 )
-                fig2.update_xaxes(title_text="State", gridcolor='#1a1a3a', color='#556677')
-                fig2.update_yaxes(title_text="Value", gridcolor='#1a1a3a', color='#556677')
-                st.plotly_chart(fig2, use_container_width=True)
-
+                fig2.update_xaxes(title_text="State", gridcolor='#2a2a4a', color='#64748b')
+                fig2.update_yaxes(title_text="Value", gridcolor='#2a2a4a', color='#64748b')
+                st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
         else:
             Q = algo.Q
             V = np.max(Q, axis=1)
-
-            if 'Random Walk' in results['env_name']:
+            
+            if 'Random Walk' in r['env_name']:
                 V_plot = V[1:-1]
                 fig2 = go.Figure()
                 fig2.add_trace(go.Bar(
                     x=list(range(len(V_plot))),
                     y=V_plot,
-                    marker_color='#00ff88',
+                    marker_color='#34d399',
                     marker_opacity=0.8,
                     text=[f'{v:.3f}' for v in V_plot],
                     textposition='outside',
-                    textfont=dict(color='#8899aa', size=9)
+                    textfont=dict(color='#94a3b8', size=10)
                 ))
                 fig2.update_layout(
                     title="Maximum Q-Values by State",
-                    height=400,
+                    height=350,
                     template='plotly_dark',
-                    paper_bgcolor='#0a0a0f',
-                    plot_bgcolor='#0a0a0f',
-                    font=dict(color='#8899aa'),
-                    margin=dict(l=40, r=40, t=40, b=40)
+                    paper_bgcolor='#1a1a2e',
+                    plot_bgcolor='#1a1a2e',
+                    font=dict(color='#94a3b8', size=11),
+                    margin=dict(l=40, r=40, t=50, b=40),
+                    showlegend=False
                 )
-                fig2.update_xaxes(title_text="State", gridcolor='#1a1a3a', color='#556677')
-                fig2.update_yaxes(title_text="Max Q-Value", gridcolor='#1a1a3a', color='#556677')
-                st.plotly_chart(fig2, use_container_width=True)
-
-            elif hasattr(env, 'rows') and hasattr(env, 'cols'):
-                try:
-                    grid = V.reshape(env.rows, env.cols)
-                    fig2 = go.Figure(data=go.Heatmap(
-                        z=grid,
-                        colorscale='Viridis',
-                        showscale=True,
-                        text=[[f'{grid[i][j]:.2f}' for j in range(grid.shape[1])] for i in range(grid.shape[0])],
-                        texttemplate='%{text}',
-                        textfont={"size": 10, "color": "white"},
-                        hoverongaps=False,
-                        colorbar=dict(title="Q-Value", tickfont=dict(color='#8899aa'))
-                    ))
-                    fig2.update_layout(
-                        title="Q-Value Heatmap",
-                        height=450,
-                        template='plotly_dark',
-                        paper_bgcolor='#0a0a0f',
-                        plot_bgcolor='#0a0a0f',
-                        font=dict(color='#8899aa'),
-                        margin=dict(l=40, r=40, t=40, b=40)
-                    )
-                    fig2.update_xaxes(title_text="Column", gridcolor='#1a1a3a', color='#556677')
-                    fig2.update_yaxes(title_text="Row", gridcolor='#1a1a3a', color='#556677')
-                    st.plotly_chart(fig2, use_container_width=True)
-                except:
-                    fig2 = go.Figure()
-                    fig2.add_trace(go.Scatter(
-                        x=list(range(len(V))),
-                        y=V,
-                        mode='lines+markers',
-                        line=dict(color='#00ff88', width=2),
-                        marker=dict(color='#00d4ff', size=6)
-                    ))
-                    fig2.update_layout(
-                        title="Maximum Q-Values",
-                        height=400,
-                        template='plotly_dark',
-                        paper_bgcolor='#0a0a0f',
-                        plot_bgcolor='#0a0a0f',
-                        font=dict(color='#8899aa'),
-                        margin=dict(l=40, r=40, t=40, b=40)
-                    )
-                    fig2.update_xaxes(title_text="State", gridcolor='#1a1a3a', color='#556677')
-                    fig2.update_yaxes(title_text="Max Q-Value", gridcolor='#1a1a3a', color='#556677')
-                    st.plotly_chart(fig2, use_container_width=True)
+                fig2.update_xaxes(title_text="State", gridcolor='#2a2a4a', color='#64748b')
+                fig2.update_yaxes(title_text="Max Q-Value", gridcolor='#2a2a4a', color='#64748b')
+                st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
             else:
                 fig2 = go.Figure()
                 fig2.add_trace(go.Bar(
                     x=list(range(len(V))),
                     y=V,
-                    marker_color='#00ff88',
+                    marker_color='#34d399',
                     marker_opacity=0.8
                 ))
                 fig2.update_layout(
                     title="Maximum Q-Values",
-                    height=400,
+                    height=350,
                     template='plotly_dark',
-                    paper_bgcolor='#0a0a0f',
-                    plot_bgcolor='#0a0a0f',
-                    font=dict(color='#8899aa'),
-                    margin=dict(l=40, r=40, t=40, b=40)
+                    paper_bgcolor='#1a1a2e',
+                    plot_bgcolor='#1a1a2e',
+                    font=dict(color='#94a3b8', size=11),
+                    margin=dict(l=40, r=40, t=50, b=40),
+                    showlegend=False
                 )
-                fig2.update_xaxes(title_text="State", gridcolor='#1a1a3a', color='#556677')
-                fig2.update_yaxes(title_text="Max Q-Value", gridcolor='#1a1a3a', color='#556677')
-                st.plotly_chart(fig2, use_container_width=True)
-
+                fig2.update_xaxes(title_text="State", gridcolor='#2a2a4a', color='#64748b')
+                fig2.update_yaxes(title_text="Max Q-Value", gridcolor='#2a2a4a', color='#64748b')
+                st.plotly_chart(fig2, use_container_width=True, config={'displayModeBar': False})
+    
+    # ------------------------------------------------------------------------
+    # TAB 3: Statistics
+    # ------------------------------------------------------------------------
     with tab3:
-        st.markdown('<div style="margin-bottom: 15px; color: #8899aa; font-size: 0.8rem; letter-spacing: 1px;">POLICY ANALYSIS</div>', unsafe_allow_html=True)
-
-        if algo_type == "Control" and hasattr(algo, 'get_policy'):
-            policy = algo.get_policy()
-
-            if 'Random Walk' in results['env_name']:
-                policy_plot = policy[1:-1]
-                fig3 = go.Figure()
-                fig3.add_trace(go.Bar(
-                    x=list(range(len(policy_plot))),
-                    y=policy_plot,
-                    marker_color='#ff6b6b',
-                    marker_opacity=0.8,
-                    text=[f'Action {a}' for a in policy_plot],
-                    textposition='outside',
-                    textfont=dict(color='#8899aa', size=9)
-                ))
-                fig3.update_layout(
-                    title="Policy by State",
-                    height=400,
-                    template='plotly_dark',
-                    paper_bgcolor='#0a0a0f',
-                    plot_bgcolor='#0a0a0f',
-                    font=dict(color='#8899aa'),
-                    margin=dict(l=40, r=40, t=40, b=40)
-                )
-                fig3.update_xaxes(title_text="State", gridcolor='#1a1a3a', color='#556677')
-                fig3.update_yaxes(title_text="Action", gridcolor='#1a1a3a', color='#556677')
-                st.plotly_chart(fig3, use_container_width=True)
-
-            elif hasattr(env, 'rows') and hasattr(env, 'cols'):
-                try:
-                    policy_grid = policy.reshape(env.rows, env.cols)
-
-                    # Create policy heatmap
-                    fig3 = go.Figure(data=go.Heatmap(
-                        z=policy_grid,
-                        colorscale='RdYlBu',
-                        showscale=True,
-                        text=[[f'{policy_grid[i][j]}' for j in range(policy_grid.shape[1])] for i in range(policy_grid.shape[0])],
-                        texttemplate='%{text}',
-                        textfont={"size": 12, "color": "white"},
-                        hoverongaps=False,
-                        colorbar=dict(title="Action", tickfont=dict(color='#8899aa'))
-                    ))
-                    fig3.update_layout(
-                        title="Policy Heatmap",
-                        height=450,
-                        template='plotly_dark',
-                        paper_bgcolor='#0a0a0f',
-                        plot_bgcolor='#0a0a0f',
-                        font=dict(color='#8899aa'),
-                        margin=dict(l=40, r=40, t=40, b=40)
-                    )
-                    fig3.update_xaxes(title_text="Column", gridcolor='#1a1a3a', color='#556677')
-                    fig3.update_yaxes(title_text="Row", gridcolor='#1a1a3a', color='#556677')
-                    st.plotly_chart(fig3, use_container_width=True)
-
-                    # Action distribution
-                    action_counts = np.bincount(policy.flatten(), minlength=n_actions)
-                    fig3b = go.Figure(data=[go.Pie(
-                        labels=[f'Action {i}' for i in range(n_actions)],
-                        values=action_counts,
-                        hole=0.4,
-                        marker=dict(colors=['#00d4ff', '#00ff88', '#ff6b6b', '#ffd93d'][:n_actions]),
-                        textfont=dict(color='#8899aa')
-                    )])
-                    fig3b.update_layout(
-                        title="Action Distribution",
-                        height=350,
-                        template='plotly_dark',
-                        paper_bgcolor='#0a0a0f',
-                        plot_bgcolor='#0a0a0f',
-                        font=dict(color='#8899aa'),
-                        margin=dict(l=40, r=40, t=40, b=40)
-                    )
-                    st.plotly_chart(fig3b, use_container_width=True)
-                except Exception as e:
-                    st.warning(f"Policy visualization not available: {str(e)}")
-            else:
-                st.info("Policy visualization available for grid environments")
-        else:
-            st.info("Policy analysis available for Control algorithms")
-
-    with tab4:
-        st.markdown('<div style="margin-bottom: 15px; color: #8899aa; font-size: 0.8rem; letter-spacing: 1px;">DETAILED STATISTICS</div>', unsafe_allow_html=True)
-
-        # Statistics table
-        stats_data = {
-            'Metric': [
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("### Experiment Information")
+            
+            stats_metrics = [
                 'Total Episodes',
                 'Total Reward',
                 'Average Reward',
@@ -1070,137 +1048,188 @@ if st.session_state.training_complete and st.session_state.results is not None:
                 'Max Reward',
                 'Training Time (s)',
                 'Convergence Rate (%)'
-            ],
-            'Value': [
-                len(algo.episode_rewards),
-                np.sum(algo.episode_rewards),
-                np.mean(algo.episode_rewards),
-                np.median(algo.episode_rewards),
-                np.std(algo.episode_rewards),
-                np.min(algo.episode_rewards),
-                np.max(algo.episode_rewards),
-                results["elapsed_time"],
-                100 * (1 - np.std(algo.episode_rewards[-100:]) / (abs(np.mean(algo.episode_rewards[-100:])) + 1e-6))
             ]
-        }
-
-        df_stats = pd.DataFrame(stats_data)
-        df_stats_display = df_stats.copy()
-        df_stats_display['Value'] = df_stats_display['Value'].apply(
-            lambda x: f'{x:.2f}' if isinstance(x, float) else str(x)
-        )
-
-        st.dataframe(
-            df_stats_display,
-            use_container_width=True,
-            hide_index=True,
-            column_config={
-                "Metric": st.column_config.TextColumn("Metric", width="medium"),
-                "Value": st.column_config.TextColumn("Value", width="small")
-            }
-        )
-
-        # Algorithm info
-        col1, col2 = st.columns(2)
-        with col1:
-            st.markdown("""
-            <div style="background: #0d0d1a; border: 1px solid #1a1a3a; border-radius: 8px; padding: 15px; margin-top: 15px;">
-                <div style="color: #8899aa; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">Algorithm Information</div>
-                <div style="color: #e0e0e0; font-size: 0.85rem; margin-top: 8px; font-family: 'Courier New', monospace;">
-                    <div>Name: {}</div>
-                    <div>Type: {}</div>
-                    <div>Environment: {}</div>
-                    <div>Seed: {}</div>
-                </div>
-            </div>
-            """.format(
-                results['algo_name'],
-                results['algo_type'],
-                results['env_name'],
-                seed
-            ), unsafe_allow_html=True)
-
-        with col2:
-            st.markdown("""
-            <div style="background: #0d0d1a; border: 1px solid #1a1a3a; border-radius: 8px; padding: 15px; margin-top: 15px;">
-                <div style="color: #8899aa; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px;">Hyperparameters</div>
-                <div style="color: #e0e0e0; font-size: 0.85rem; margin-top: 8px; font-family: 'Courier New', monospace;">
-                    <div>Alpha: {:.3f}</div>
-                    <div>Gamma: {:.2f}</div>
-                    <div>Lambda: {:.2f}</div>
-                    <div>Epsilon: {:.2f}</div>
-                </div>
-            </div>
-            """.format(alpha, gamma, lambda_, epsilon), unsafe_allow_html=True)
-
-        # Export
-        st.markdown("""
-        <div style="margin-top: 20px; border-top: 1px solid #1a1a3a; padding-top: 20px;">
-            <div style="color: #8899aa; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">Export Results</div>
-        </div>
-        """, unsafe_allow_html=True)
-
-        if st.button("Download CSV", use_container_width=True):
-            export_data = pd.DataFrame({
-                'Episode': list(range(len(algo.episode_rewards))),
-                'Reward': algo.episode_rewards,
-                'Cumulative_Average': np.cumsum(algo.episode_rewards) / (np.arange(len(algo.episode_rewards)) + 1)
+            
+            stats_values = [
+                str(metrics.get('total_episodes', 0)),
+                f"{metrics.get('total_reward', 0):.2f}",
+                f"{metrics.get('mean_reward', 0):.2f}",
+                f"{metrics.get('median_reward', 0):.2f}",
+                f"{metrics.get('std_reward', 0):.2f}",
+                f"{metrics.get('min_reward', 0):.2f}",
+                f"{metrics.get('max_reward', 0):.2f}",
+                f"{r['elapsed']:.2f}",
+                f"{metrics.get('convergence', 0):.1f}"
+            ]
+            
+            df_stats = pd.DataFrame({
+                'Metric': stats_metrics,
+                'Value': stats_values
             })
-            if hasattr(algo, 'episode_lengths'):
-                export_data['Episode_Length'] = algo.episode_lengths
-
-            csv = export_data.to_csv(index=False)
-            st.download_button(
-                label="Download",
-                data=csv,
-                file_name=f"td_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
-                mime="text/csv"
+            
+            st.dataframe(
+                df_stats,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Metric": st.column_config.TextColumn("Metric", width="medium"),
+                    "Value": st.column_config.TextColumn("Value", width="small")
+                }
             )
+        
+        with col2:
+            st.markdown("### Configuration")
+            
+            config_metrics = [
+                'Algorithm',
+                'Type',
+                'Environment',
+                'Episodes',
+                'Seed',
+                'Learning Rate (α)',
+                'Discount Factor (γ)',
+                'Eligibility Trace (λ)',
+                'Exploration (ε)'
+            ]
+            
+            config_values = [
+                r['algo_name'],
+                r['algo_type'],
+                r['env_name'],
+                str(r['n_episodes']),
+                str(r['seed']),
+                f"{r['alpha']:.3f}",
+                f"{r['gamma']:.2f}",
+                f"{r['lambda_']:.2f}",
+                f"{r['epsilon']:.2f}"
+            ]
+            
+            df_config = pd.DataFrame({
+                'Parameter': config_metrics,
+                'Value': config_values
+            })
+            
+            st.dataframe(
+                df_config,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Parameter": st.column_config.TextColumn("Parameter", width="medium"),
+                    "Value": st.column_config.TextColumn("Value", width="small")
+                }
+            )
+        
+        # Export
+        st.markdown("### Export Results")
+        export_col1, export_col2 = st.columns(2)
+        
+        with export_col1:
+            if st.button("📥 Download CSV", use_container_width=True):
+                export_data = pd.DataFrame({
+                    'Episode': list(range(len(rewards))),
+                    'Reward': rewards,
+                    'Cumulative_Average': np.cumsum(rewards) / (np.arange(len(rewards)) + 1)
+                })
+                if hasattr(algo, 'episode_lengths'):
+                    export_data['Episode_Length'] = algo.episode_lengths
+                
+                csv = export_data.to_csv(index=False)
+                st.download_button(
+                    label="Download",
+                    data=csv,
+                    file_name=f"td_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.csv",
+                    mime="text/csv",
+                    use_container_width=True
+                )
+        
+        with export_col2:
+            if st.button("📊 View Raw Data", use_container_width=True):
+                with st.expander("Raw Episode Data"):
+                    st.dataframe(
+                        pd.DataFrame({
+                            'Episode': list(range(len(rewards))),
+                            'Reward': rewards
+                        }).head(20),
+                        use_container_width=True
+                    )
+                    st.caption(f"Showing first 20 of {len(rewards)} episodes")
+    
+    # ------------------------------------------------------------------------
+    # TAB 4: Experiment History
+    # ------------------------------------------------------------------------
+    with tab4:
+        st.markdown("### Experiment History")
+        
+        if len(st.session_state.experiment_history) > 0:
+            # Create history dataframe
+            history_data = []
+            for exp in st.session_state.experiment_history[-10:]:  # Show last 10
+                history_data.append({
+                    'Time': exp['timestamp'][:19],
+                    'Algorithm': exp['config']['algo'],
+                    'Environment': exp['config']['env'],
+                    'Avg Reward': f"{exp['results']['avg_reward']:.2f}",
+                    'Best Reward': f"{exp['results']['best_reward']:.2f}",
+                    'Episodes': exp['results']['episodes'],
+                    'Time (s)': f"{exp['results']['training_time']:.2f}"
+                })
+            
+            df_history = pd.DataFrame(history_data)
+            st.dataframe(df_history, use_container_width=True, hide_index=True)
+            
+            # Clear history button
+            if st.button("🗑️ Clear History"):
+                st.session_state.experiment_history = []
+                st.rerun()
+        else:
+            st.info("No experiments run yet. Run an experiment to see history here.")
 
+# ============================================================================
+# WELCOME SCREEN
+# ============================================================================
 else:
-    # Welcome / Initial State
     st.markdown("""
     <div class="welcome-container">
         <div class="welcome-box">
-            <div class="welcome-icon">🧠</div>
-            <h2 class="welcome-title">TD LEARNING FRAMEWORK</h2>
-            <p class="welcome-text">
-                Ready to run experiments with Temporal Difference learning algorithms.
+            <h2>🧪 TD Learning Research Platform</h2>
+            <p>
+                Configure your experiment using the sidebar controls, then click 
+                <strong>"Run Experiment"</strong> to begin training.
             </p>
-            <div class="step-grid">
-                <div class="step-item">
-                    <div class="step-number">Step 1</div>
-                    <div class="step-desc">Select environment and algorithm</div>
+            <div class="welcome-steps">
+                <div class="welcome-step">
+                    <div class="num">Step 1</div>
+                    <div class="text">Select environment</div>
                 </div>
-                <div class="step-item">
-                    <div class="step-number">Step 2</div>
-                    <div class="step-desc">Configure hyperparameters</div>
+                <div class="welcome-step">
+                    <div class="num">Step 2</div>
+                    <div class="text">Choose algorithm</div>
                 </div>
-                <div class="step-item">
-                    <div class="step-number">Step 3</div>
-                    <div class="step-desc">Set training parameters</div>
+                <div class="welcome-step">
+                    <div class="num">Step 3</div>
+                    <div class="text">Set hyperparameters</div>
                 </div>
-                <div class="step-item">
-                    <div class="step-number">Step 4</div>
-                    <div class="step-highlight">Click "EXECUTE TRAINING"</div>
+                <div class="welcome-step">
+                    <div class="num">Step 4</div>
+                    <div class="text highlight">▶ Run Experiment</div>
                 </div>
             </div>
-            <div class="welcome-footer">
-                <span class="welcome-dot-green">●</span> Configure parameters in the sidebar
-                <span style="color: #8899aa; margin: 0 10px;">|</span>
-                <span class="welcome-dot-blue">●</span> Results will appear here
+            <div style="font-size: 0.8rem; color: #64748b; margin-top: 0.5rem;">
+                Supported: 6 environments · 9 algorithms
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
 
-# Status Bar
+# ============================================================================
+# STATUS BAR
+# ============================================================================
 st.markdown("""
 <div class="status-bar">
-    <span>SYSTEM: ONLINE</span>
-    <span>FRAMEWORK: TD LEARNING v2.0</span>
-    <span>STATUS: READY</span>
-    <span>TIMESTAMP: {}</span>
+    <span>● System: Online</span>
+    <span>Framework: TD Learning v2.0</span>
+    <span>Status: Ready</span>
+    <span>{}</span>
 </div>
 """.format(datetime.now().strftime("%Y-%m-%d %H:%M:%S")), unsafe_allow_html=True)
 
